@@ -1,0 +1,10 @@
+langchain
+langchain-community
+langchain-huggingface
+chromadb
+sentence-transformers
+pypdf
+docx2txt
+beautifulsoup4
+rank_bm25
+langchain-experimental
