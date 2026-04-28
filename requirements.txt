@@ -8,3 +8,7 @@ docx2txt
 beautifulsoup4
 rank_bm25
 langchain-experimental
+fastapi
+uvicorn
+python-multipart
+jinja2

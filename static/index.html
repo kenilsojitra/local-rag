@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus RAG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar for Uploads -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-cube logo-icon"></i>
+                <h2>Nexus RAG</h2>
+            </div>
+            
+            <div class="upload-section">
+                <h3>Knowledge Base</h3>
+                <p class="subtitle">Drop documents to expand context.</p>
+                
+                <div id="drop-zone" class="drop-zone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Drag & Drop or <span>Click to Upload</span></p>
+                    <input type="file" id="file-input" multiple hidden accept=".txt,.pdf,.csv">
+                </div>
+                
+                <div id="upload-status" class="upload-status hidden">
+                    <div class="spinner"></div>
+                    <span id="status-text">Ingesting...</span>
+                </div>
+            </div>
+
+            <div class="footer-info">
+                Local RAG • Mistral
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-container">
+            <header class="chat-header">
+                <div class="header-status">
+                    <span class="status-dot"></span>
+                    <span>System Online</span>
+                </div>
+                <button id="clear-chat" class="icon-btn" title="Clear Chat">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </header>
+
+            <div id="chat-box" class="chat-box">
+                <!-- Welcome Message -->
+                <div class="message system">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="bubble">
+                        Hello! I am your Nexus RAG assistant. Ask me questions about your uploaded documents.
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="chat-input" placeholder="Ask a question... (Shift+Enter for new line)" rows="1"></textarea>
+                    <button id="send-btn" class="send-btn">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
