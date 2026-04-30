@@ -17,6 +17,9 @@
                 <h2>Nexus RAG</h2>
             </div>
             
+            <button id="manage-docs-btn" class="manage-btn"><i class="fa-solid fa-folder-open"></i> Manage Documents</button>
+            <a href="/history" class="manage-btn" style="display:flex;align-items:center;gap:8px;text-decoration:none;margin-top:8px;"><i class="fa-solid fa-clock-rotate-left"></i> Chat History</a>
+            
             <div class="upload-section">
                 <h3>Knowledge Base</h3>
                 <p class="subtitle">Drop documents to expand context.</p>
@@ -50,14 +53,26 @@
                 </button>
             </header>
 
-            <div id="chat-box" class="chat-box">
-                <!-- Welcome Message -->
-                <div class="message system">
-                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
-                    <div class="bubble">
-                        Hello! I am your Nexus RAG assistant. Ask me questions about your uploaded documents.
+            <div class="chat-content-wrapper">
+                <div id="chat-box" class="chat-box">
+                    <!-- Welcome Message -->
+                    <div class="message system">
+                        <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                        <div class="bubble">
+                            Hello! I am your Nexus Agent. Ask me questions, and I can search your documents, search the web, or perform calculations.
+                        </div>
                     </div>
                 </div>
+                
+                <aside id="sources-sidebar" class="sources-sidebar hidden">
+                    <div class="sources-header">
+                        <h3><i class="fa-solid fa-book-open"></i> Cited Sources</h3>
+                        <button id="close-sources" class="icon-btn" title="Close Sources"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="sources-list" class="sources-list">
+                        <!-- Sources injected via JS -->
+                    </div>
+                </aside>
             </div>
 
             <div class="input-area">
@@ -69,6 +84,30 @@
                 </div>
             </div>
         </main>
+    </div>
+    
+    <!-- Dashboard Modal -->
+    <div id="dashboard-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Document Management</h2>
+                <button id="close-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="table-container">
+                <table id="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Chunks in DB</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docs-tbody">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>

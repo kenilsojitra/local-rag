@@ -11,6 +11,101 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearChatBtn = document.getElementById('clear-chat');
 
     let chatHistory = [];
+    let sourceCounter = 1;
+    let currentSessionId = null;
+
+    // --- Document Dashboard ---
+    const manageDocsBtn = document.getElementById('manage-docs-btn');
+    const dashboardModal = document.getElementById('dashboard-modal');
+    const closeModalBtn = document.getElementById('close-modal');
+    const docsTbody = document.getElementById('docs-tbody');
+
+    if (manageDocsBtn) {
+        manageDocsBtn.addEventListener('click', openDashboard);
+    }
+    
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => dashboardModal.classList.add('hidden'));
+    }
+    
+    window.addEventListener('click', (e) => {
+        if (e.target === dashboardModal) {
+            dashboardModal.classList.add('hidden');
+        }
+    });
+
+    async function openDashboard() {
+        dashboardModal.classList.remove('hidden');
+        docsTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Loading...</td></tr>';
+        
+        try {
+            const res = await fetch('/api/documents');
+            const data = await res.json();
+            
+            docsTbody.innerHTML = '';
+            if (data.documents && data.documents.length > 0) {
+                data.documents.forEach(doc => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${doc.filename}</td>
+                        <td>${doc.chunks}</td>
+                        <td>
+                            <button class="delete-btn" data-filename="${doc.filename}">Delete</button>
+                        </td>
+                    `;
+                    docsTbody.appendChild(tr);
+                });
+                
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const filename = e.target.getAttribute('data-filename');
+                        if (confirm(`Delete ${filename}? This will remove it from the context.`)) {
+                            e.target.textContent = '...';
+                            e.target.disabled = true;
+                            try {
+                                await fetch(`/api/documents/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+                                openDashboard();
+                            } catch(err) {
+                                alert('Error deleting document');
+                                openDashboard();
+                            }
+                        }
+                    });
+                });
+            } else {
+                docsTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No documents found.</td></tr>';
+            }
+        } catch(e) {
+            docsTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;">Error loading documents.</td></tr>';
+        }
+    }
+
+    // --- Sources Sidebar ---
+    const sourcesSidebar = document.getElementById('sources-sidebar');
+    const closeSourcesBtn = document.getElementById('close-sources');
+    const sourcesList = document.getElementById('sources-list');
+
+    if (closeSourcesBtn) {
+        closeSourcesBtn.addEventListener('click', () => sourcesSidebar.classList.add('hidden'));
+    }
+
+    function addSourceToSidebar(sourceData) {
+        sourcesSidebar.classList.remove('hidden');
+        const filename = sourceData.source.split(/[/\\]/).pop();
+        
+        // Prevent duplicates (simple check)
+        const contentStr = sourceData.content.substring(0, 50);
+        const existing = Array.from(sourcesList.querySelectorAll('p')).some(p => p.textContent.includes(contentStr));
+        if (existing) return;
+        
+        const div = document.createElement('div');
+        div.className = 'source-item';
+        div.innerHTML = `
+            <h4><i class="fa-solid fa-file-lines"></i> ${filename}</h4>
+            <p>${sourceData.content}</p>
+        `;
+        sourcesList.appendChild(div);
+    }
 
     // --- File Upload Logic ---
     dropZone.addEventListener('click', () => fileInput.click());
@@ -104,7 +199,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sendBtn.addEventListener('click', sendMessage);
     clearChatBtn.addEventListener('click', () => {
         chatHistory = [];
-        const welcome = chatBox.firstElementChild; // Keep welcome message
+        currentSessionId = null;
+        const welcome = chatBox.firstElementChild;
         chatBox.innerHTML = '';
         if(welcome) chatBox.appendChild(welcome);
     });
@@ -148,6 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.style.height = 'auto';
         sendBtn.disabled = true;
 
+        // Clear sources list on new query
+        sourcesList.innerHTML = '';
+        sourcesSidebar.classList.add('hidden');
+
         // Append user message
         appendMessage('user', text);
 
@@ -157,9 +257,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Prepare request body
         const reqBody = {
             query: text,
-            history: chatHistory
+            history: chatHistory,
+            session_id: currentSessionId
         };
-        
+
         chatHistory.push(userMsg);
 
         // Append empty bot message for streaming
@@ -184,14 +285,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const chunk = decoder.decode(value, { stream: true });
                 botText += chunk;
-                
-                // Update UI with parsed markdown
-                botBubble.innerHTML = marked.parse(botText);
+
+                // Extract session_id (only sent once as first chunk)
+                const sessionMatch = botText.match(/\[\[SESSION_ID\]\]([^\n]+)\n/);
+                if (sessionMatch) {
+                    currentSessionId = sessionMatch[1].trim();
+                }
+
+                // Extract sources
+                const sourceRegex = /\[\[SOURCE\]\](\{.*?\})\n/g;
+                let match;
+                while ((match = sourceRegex.exec(botText)) !== null) {
+                    try {
+                        const sourceData = JSON.parse(match[1]);
+                        addSourceToSidebar(sourceData);
+                    } catch(e){}
+                }
+
+                // Display text stripped of all control markers
+                const displayText = botText
+                    .replace(/\[\[SESSION_ID\]\][^\n]+\n/, '')
+                    .replace(/\[\[SOURCE\]\](\{.*?\})\n/g, '');
+
+                botBubble.innerHTML = marked.parse(displayText);
                 scrollToBottom();
             }
             
-            // Add bot response to history
-            chatHistory.push({ role: 'assistant', content: botText });
+            const finalDisplayText = botText
+                .replace(/\[\[SESSION_ID\]\][^\n]+\n/, '')
+                .replace(/\[\[SOURCE\]\](\{.*?\})\n/g, '');
+            chatHistory.push({ role: 'assistant', content: finalDisplayText });
 
         } catch (error) {
             botBubble.innerHTML = `<span style="color: #ef4444;">Error connecting to server.</span>`;

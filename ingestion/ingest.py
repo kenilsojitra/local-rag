@@ -1,10 +1,11 @@
 import os
 import pickle
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader, CSVLoader
+from langchain_community.document_loaders import DirectoryLoader, TextLoader, CSVLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_community.retrievers import BM25Retriever
+from langchain_core.documents import Document
 
 # Directories
 DATA_DIR = "data"
@@ -57,7 +58,7 @@ def process_and_store_documents():
     print("Storing in ChromaDB and BM25...")
 
     # 4. Store in ChromaDB (Dense Vector Search)
-    db = Chroma.from_documents(
+    Chroma.from_documents(
         documents=chunks,
         embedding=emb,
         persist_directory=CHROMA_DIR
@@ -70,6 +71,28 @@ def process_and_store_documents():
         pickle.dump(bm25_retriever, f)
     
     print(f"Successfully ingested {len(chunks)} chunks into {CHROMA_DIR} and {BM25_FILE}!")
+
+def rebuild_bm25():
+    """Rebuilds the BM25 index from documents currently in ChromaDB."""
+    emb = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    db = Chroma(persist_directory=CHROMA_DIR, embedding_function=emb)
+    
+    db_data = db.get()
+    docs = []
+    if db_data and "documents" in db_data and db_data["documents"]:
+        for text, meta in zip(db_data["documents"], db_data["metadatas"]):
+            docs.append(Document(page_content=text, metadata=meta))
+    
+    if not docs:
+        if os.path.exists(BM25_FILE):
+            os.remove(BM25_FILE)
+        print("No documents in ChromaDB, removed BM25 file.")
+        return
+        
+    bm25_retriever = BM25Retriever.from_documents(docs)
+    with open(BM25_FILE, "wb") as f:
+        pickle.dump(bm25_retriever, f)
+    print(f"Rebuilt BM25 index with {len(docs)} chunks.")
 
 if __name__ == "__main__":
     process_and_store_documents()

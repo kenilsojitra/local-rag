@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus RAG — History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { overflow: auto; }
+
+        .history-layout {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            gap: 32px;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .history-header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .history-header h1 i { color: var(--accent-color); }
+
+        .back-btn {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .back-btn:hover { border-color: var(--accent-color); color: var(--text-primary); }
+
+        /* Stats cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Charts */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 700px) { .charts-row { grid-template-columns: 1fr; } }
+
+        .chart-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(12px);
+        }
+
+        .chart-card h3 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        canvas { max-height: 220px; }
+
+        /* Sessions table */
+        .sessions-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+        }
+
+        .sessions-card h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        th { color: var(--text-secondary); font-weight: 500; }
+
+        tr:last-child td { border-bottom: none; }
+
+        tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .session-title { color: var(--text-primary); max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .session-date { color: var(--text-secondary); white-space: nowrap; }
+
+        .view-btn, .del-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+
+        .view-btn { background: var(--accent-color); color: #fff; margin-right: 6px; }
+        .view-btn:hover { background: var(--accent-hover); }
+        .del-btn { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        .del-btn:hover { background: rgba(239,68,68,0.3); }
+
+        /* Session viewer modal */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal.hidden { display: none; }
+
+        .modal-content {
+            background: #1a1d29;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: min(700px, 95vw);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 { font-size: 1rem; }
+
+        .modal-body { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+        .msg-user, .msg-assistant {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            max-width: 85%;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .msg-user { background: var(--accent-color); align-self: flex-end; }
+        .msg-assistant { background: var(--bot-msg-bg); align-self: flex-start; border: 1px solid var(--border-color); }
+
+        .msg-ts { font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px; }
+        .msg-user + .msg-ts { text-align: right; }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .icon-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.07); }
+
+        .empty { color: var(--text-secondary); text-align: center; padding: 40px; }
+    </style>
+</head>
+<body>
+<div class="history-layout">
+    <div class="history-header">
+        <h1><i class="fa-solid fa-clock-rotate-left"></i> Chat History</h1>
+        <a href="/" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back to Chat</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+        <div class="stat-card"><div class="stat-value" id="stat-sessions">—</div><div class="stat-label">Total Sessions</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-messages">—</div><div class="stat-label">Total Messages</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-user-msgs">—</div><div class="stat-label">User Messages</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-bot-msgs">—</div><div class="stat-label">AI Responses</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h3><i class="fa-solid fa-chart-line"></i> Messages per Day</h3>
+            <canvas id="chart-daily"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3><i class="fa-solid fa-chart-pie"></i> User vs AI Ratio</h3>
+            <canvas id="chart-ratio"></canvas>
+        </div>
+    </div>
+
+    <!-- Sessions list -->
+    <div class="sessions-card">
+        <h2><i class="fa-solid fa-list"></i> All Sessions</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>First Message</th>
+                    <th>Last Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="sessions-tbody">
+                <tr><td colspan="3" class="empty">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Session viewer modal -->
+<div id="session-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Conversation</h2>
+            <button class="icon-btn" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.getElementById('close-modal').addEventListener('click', () => {
+    document.getElementById('session-modal').classList.add('hidden');
+});
+window.addEventListener('click', e => {
+    if (e.target === document.getElementById('session-modal'))
+        document.getElementById('session-modal').classList.add('hidden');
+});
+
+async function loadStats() {
+    const res = await fetch('/api/history/stats');
+    const data = await res.json();
+
+    const totalUser = data.daily.reduce((s, d) => s + (d.user || 0), 0);
+    const totalBot  = data.daily.reduce((s, d) => s + (d.assistant || 0), 0);
+
+    document.getElementById('stat-sessions').textContent  = data.total_sessions;
+    document.getElementById('stat-messages').textContent  = data.total_messages;
+    document.getElementById('stat-user-msgs').textContent = totalUser;
+    document.getElementById('stat-bot-msgs').textContent  = totalBot;
+
+    const labels = data.daily.map(d => d.date);
+    const userCounts = data.daily.map(d => d.user || 0);
+    const botCounts  = data.daily.map(d => d.assistant || 0);
+
+    // Line chart — messages per day
+    new Chart(document.getElementById('chart-daily'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'User', data: userCounts, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', tension: 0.4, fill: true },
+                { label: 'AI',   data: botCounts,  borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)',  tension: 0.4, fill: true },
+            ]
+        },
+        options: {
+            plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+            }
+        }
+    });
+
+    // Doughnut chart — ratio
+    new Chart(document.getElementById('chart-ratio'), {
+        type: 'doughnut',
+        data: {
+            labels: ['User', 'AI'],
+            datasets: [{ data: [totalUser, totalBot], backgroundColor: ['#6366f1', '#10b981'], borderWidth: 0 }]
+        },
+        options: {
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 12 } } }
+            },
+            cutout: '65%'
+        }
+    });
+}
+
+async function loadSessions() {
+    const res = await fetch('/api/history/sessions');
+    const data = await res.json();
+    const tbody = document.getElementById('sessions-tbody');
+
+    if (!data.sessions || data.sessions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty">No sessions yet. Start chatting!</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    data.sessions.forEach(s => {
+        const date = new Date(s.updated_at).toLocaleString();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="session-title">${escHtml(s.title || 'Untitled')}</td>
+            <td class="session-date">${date}</td>
+            <td>
+                <button class="view-btn" data-id="${s.id}"><i class="fa-solid fa-eye"></i> View</button>
+                <button class="del-btn"  data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.view-btn').forEach(btn =>
+        btn.addEventListener('click', () => openSession(btn.dataset.id, btn.closest('tr').querySelector('.session-title').textContent))
+    );
+    tbody.querySelectorAll('.del-btn').forEach(btn =>
+        btn.addEventListener('click', async () => {
+            if (!confirm('Delete this session?')) return;
+            await fetch(`/api/history/sessions/${btn.dataset.id}`, { method: 'DELETE' });
+            loadSessions();
+            loadStats();
+        })
+    );
+}
+
+async function openSession(id, title) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = '<div class="empty">Loading...</div>';
+    document.getElementById('session-modal').classList.remove('hidden');
+
+    const res = await fetch(`/api/history/sessions/${id}`);
+    const data = await res.json();
+    const body = document.getElementById('modal-body');
+    body.innerHTML = '';
+
+    data.messages.forEach(m => {
+        const div = document.createElement('div');
+        div.className = m.role === 'user' ? 'msg-user' : 'msg-assistant';
+        div.textContent = m.content;
+        body.appendChild(div);
+
+        const ts = document.createElement('div');
+        ts.className = 'msg-ts ' + (m.role === 'user' ? 'msg-user' : '');
+        ts.textContent = new Date(m.timestamp).toLocaleString();
+        body.appendChild(ts);
+    });
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadStats();
+loadSessions();
+</script>
+</body>
+</html>
